@@ -105,6 +105,7 @@ typedef enum {joyFullscreen,
               joySave,
               joyLoad,
               joyIncrement,
+              joyDecrement,
               joyReset,
               joySpeedDown,
               joySpeedUp,
@@ -123,6 +124,7 @@ static const char *JoyCmdName[] = { "Joy Mapping Fullscreen",
                                     "Joy Mapping Save State",
                                     "Joy Mapping Load State",
                                     "Joy Mapping Increment Slot",
+                                    "Joy Mapping Decrement Slot",
                                     "Joy Mapping Reset",
                                     "Joy Mapping Speed Down",
                                     "Joy Mapping Speed Up",
@@ -136,7 +138,7 @@ static const char *JoyCmdName[] = { "Joy Mapping Fullscreen",
 
 static const int NumJoyCommands = sizeof(JoyCmdName) / sizeof(const char *);
 
-static int JoyCmdActive[16][2];  /* if extra joystick commands are added above, make sure there is enough room in this array */
+static int JoyCmdActive[17][2];  /* if extra joystick commands are added above, make sure there is enough room in this array */
                                  /* [i][0] is Command Active, [i][1] is Hotkey Active */
 
 static int GamesharkActive = 0;
@@ -382,6 +384,8 @@ static int SDLCALL event_sdl_filter(void *userdata, SDL_Event *event)
                         main_state_load(NULL); /* load using current slot */
                     else if (cmd == joyIncrement)
                         main_state_inc_slot();
+                    else if (cmd == joyDecrement)
+                        main_state_dec_slot();
                     else if (cmd == joyReset)
                         main_reset(0);
                     else if (cmd == joySpeedDown)
@@ -560,6 +564,7 @@ int event_set_core_defaults(void)
     ConfigSetDefaultString(l_CoreEventsConfig, JoyCmdName[joySave], "",       "Joystick event string for saving the emulator state");
     ConfigSetDefaultString(l_CoreEventsConfig, JoyCmdName[joyLoad], "",       "Joystick event string for loading the emulator state");
     ConfigSetDefaultString(l_CoreEventsConfig, JoyCmdName[joyIncrement], "",  "Joystick event string for advancing the save state slot");
+    ConfigSetDefaultString(l_CoreEventsConfig, JoyCmdName[joyDecrement], "",  "Joystick event string for retarding the save state slot");
     ConfigSetDefaultString(l_CoreEventsConfig, JoyCmdName[joyReset], "",      "Joystick event string for resetting the emulator");
     ConfigSetDefaultString(l_CoreEventsConfig, JoyCmdName[joySpeedDown], "",  "Joystick event string for slowing down the emulator");
     ConfigSetDefaultString(l_CoreEventsConfig, JoyCmdName[joySpeedUp], "",    "Joystick event string for speeding up the emulator");

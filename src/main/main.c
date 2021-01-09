@@ -553,6 +553,11 @@ void main_state_inc_slot(void)
     savestates_inc_slot();
 }
 
+void main_state_dec_slot(void)
+{
+    savestates_dec_slot();
+}
+
 void main_state_load(const char *filename)
 {
     if (netplay_is_init())

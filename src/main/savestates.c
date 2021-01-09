@@ -138,9 +138,18 @@ void savestates_set_autoinc_slot(int b)
 
 void savestates_inc_slot(void)
 {
-    if(++slot>9)
-        slot = 0;
-    StateChanged(M64CORE_SAVESTATE_SLOT, slot);
+    unsigned int s = slot+1;
+    if(s>9)
+        s = 0;
+    savestates_select_slot(s);
+}
+
+void savestates_dec_slot(void)
+{
+    unsigned int s = slot-1;
+    if(slot==0)
+        s = 9;
+    savestates_select_slot(s);
 }
 
 savestates_job savestates_get_job(void)
