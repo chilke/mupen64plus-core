@@ -23,6 +23,7 @@
 
 #include "oglft_c.h"
 
+#define GL_GLEXT_PROTOTYPES
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <SDL_thread.h>
@@ -38,6 +39,34 @@
 #include "api/callbacks.h"
 
 #define FONT_FILENAME "font.ttf"
+
+const char *vertexShaderSource = "\
+attribute vec4 vertex; // <vec2 pos, vec2 tex>\n\
+varying vec2 TexCoords;\n\
+\n\
+uniform mat4 projection;\n\
+\n\
+void main()\n\
+{\n\
+    gl_Position = projection * vec4(vertex.xy, 0.0, 1.0);\n\
+    TexCoords = vertex.zw;\n\
+}  \0";
+
+const char *fragmentShaderSource = "\
+varying vec2 TexCoords;\n\
+\n\
+uniform sampler2D text;\n\
+uniform vec3 fgColor;\n\
+uniform vec3 bgColor;\n\
+uniform float alpha;\n\
+\n\
+void main()\n\
+{\n\
+    vec4 sampled = texture2D(text, TexCoords);\n\
+    gl_FragColor = vec4(mix(bgColor, fgColor, sampled.r), alpha*sampled.a);\n\
+}\0";
+
+unsigned int vertexShader, fragmentShader, shaderProgram;
 
 typedef void (APIENTRYP PTRGLACTIVETEXTURE)(GLenum texture);
 static PTRGLACTIVETEXTURE pglActiveTexture = NULL;
@@ -211,6 +240,8 @@ void osd_init(int width, int height)
 {
     const char *fontpath;
     int i;
+    int success;
+    char infoLog[512];
 
     osd_list_lock = SDL_CreateMutex();
     if (!osd_list_lock) {
@@ -234,9 +265,57 @@ void osd_init(int width, int height)
         return;
     }
 
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        fprintf(stderr, "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n%s\n", infoLog);
+    }
+    else
+    {
+        fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+        glCompileShader(fragmentShader);
+        glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+        if (!success)
+        {
+            glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+            fprintf(stderr, "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n%s\n", infoLog);
+            glDeleteShader(vertexShader);
+        }
+        else
+        {
+            shaderProgram = glCreateProgram();
+            glAttachShader(shaderProgram, vertexShader);
+            glAttachShader(shaderProgram, fragmentShader);
+            glLinkProgram(shaderProgram);
+            glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+            if (!success)
+            {
+                glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+                fprintf(stderr, "ERROR::SHADER::PROGRAM::LINK_FAILED\n%s\n", infoLog);
+                glDeleteShader(vertexShader);
+                glDeleteShader(fragmentShader);
+            }
+            else
+            {
+                DebugMessage(M64MSG_INFO, "OSD created shader program");
+            }
+        }
+    
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+    }
+
 #if SDL_VERSION_ATLEAST(2,0,0)
-    int gl_context;
+    int gl_context, major, minor;
     VidExt_GL_GetAttribute(M64P_GL_CONTEXT_PROFILE_MASK, &gl_context);
+    VidExt_GL_GetAttribute(M64P_GL_CONTEXT_MAJOR_VERSION, &major);
+    VidExt_GL_GetAttribute(M64P_GL_CONTEXT_MINOR_VERSION, &minor);
+    DebugMessage(M64MSG_WARNING, "Major version: %d, Minor version: %d", major, minor);
     if (gl_context == M64P_GL_CONTEXT_PROFILE_CORE)
     {
         DebugMessage(M64MSG_WARNING, "OSD not compatible with OpenGL core context. OSD deactivated.");
@@ -289,6 +368,8 @@ void osd_exit(void)
 
     SDL_DestroyMutex(osd_list_lock);
 
+    glDeleteProgram(shaderProgram);
+
     // reset initialized flag
     l_OsdInitialized = 0;
 }
@@ -296,12 +377,23 @@ void osd_exit(void)
 // renders the current osd message queue to the screen
 void osd_render()
 {
+    static unsigned int lastRenderTime = 0;
+    unsigned int curRenderTime = SDL_GetTicks();
     osd_message_t *msg, *safe;
     int i;
 
+
+    glUseProgram(shaderProgram);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     // if we're not initialized or list is empty, then just skip it all
     if (!l_OsdInitialized || list_empty(&l_messageQueue))
+    {
+        lastRenderTime = curRenderTime;
         return;
+    }
 
     // get the viewport dimensions
     GLint viewport[4];
@@ -370,8 +462,9 @@ void osd_render()
     SDL_LockMutex(osd_list_lock);
     list_for_each_entry_safe_t(msg, safe, &l_messageQueue, osd_message_t, list) {
         // update message state
+        msg->frames += curRenderTime - lastRenderTime;
         if(msg->timeout[msg->state] != OSD_INFINITE_TIMEOUT &&
-           ++msg->frames >= msg->timeout[msg->state])
+           msg->frames >= msg->timeout[msg->state])
         {
             // if message is in last state, mark it for deletion and continue to the next message
             if(msg->state >= OSD_NUM_STATES - 1)
@@ -441,6 +534,8 @@ void osd_render()
         glEnableClientState(GL_SECONDARY_COLOR_ARRAY);
 
     glFinish();
+
+    lastRenderTime = curRenderTime;
 }
 
 // creates a new osd_message_t, adds it to the message queue and returns it in case
@@ -486,15 +581,15 @@ osd_message_t * osd_new_message(enum osd_corner eCorner, const char *fmt, ...)
 
     if (eCorner >= OSD_MIDDLE_LEFT && eCorner <= OSD_MIDDLE_RIGHT)
     {
-        msg->timeout[OSD_APPEAR] = 20;
-        msg->timeout[OSD_DISPLAY] = 60;
-        msg->timeout[OSD_DISAPPEAR] = 20;
+        msg->timeout[OSD_APPEAR] = 333;
+        msg->timeout[OSD_DISPLAY] = 1000;
+        msg->timeout[OSD_DISAPPEAR] = 333;
     }
     else
     {
-        msg->timeout[OSD_APPEAR] = 20;
-        msg->timeout[OSD_DISPLAY] = 180;
-        msg->timeout[OSD_DISAPPEAR] = 40;
+        msg->timeout[OSD_APPEAR] = 333;
+        msg->timeout[OSD_DISPLAY] = 1500;
+        msg->timeout[OSD_DISAPPEAR] = 666;
     }
 
     // add to message queue
