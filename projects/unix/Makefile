@@ -582,11 +582,8 @@ endif
 ifeq ($(OSD), 1)
 SOURCE += \
     $(SRCDIR)/osd/osd.c \
-    $(SRCDIR)/osd/oglft_c.cpp
-
-# oglft
-SOURCE += $(SUBDIR)/oglft/OGLFT.cpp
-CXXFLAGS += -I$(SUBDIR)/oglft
+    $(SRCDIR)/osd/osd_text.c \
+    $(SRCDIR)/osd/osd_gl.c
 endif
 
 # netplay

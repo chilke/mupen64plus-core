@@ -1,0 +1,40 @@
+#ifndef __OSD_GL_H__
+#define __OSD_GL_H__
+
+#include <SDL2/SDL_opengl.h>
+
+typedef void (APIENTRYP PFNGLGENTEXTURESPROC) (GLsizei n, GLuint *textures);
+
+extern PFNGLUNIFORM1FPROC pglUniform1f;
+extern PFNGLGETUNIFORMLOCATIONPROC pglGetUniformLocation;
+extern PFNGLUNIFORM2FPROC pglUniform2f;
+extern PFNGLCREATESHADERPROC pglCreateShader;
+extern PFNGLSHADERSOURCEPROC pglShaderSource;
+extern PFNGLCOMPILESHADERPROC pglCompileShader;
+extern PFNGLGETSHADERIVPROC pglGetShaderiv;
+extern PFNGLGETSHADERINFOLOGPROC pglGetShaderInfoLog;
+extern PFNGLDELETESHADERPROC pglDeleteShader;
+extern PFNGLCREATEPROGRAMPROC pglCreateProgram;
+extern PFNGLATTACHSHADERPROC pglAttachShader;
+extern PFNGLLINKPROGRAMPROC pglLinkProgram;
+extern PFNGLGETPROGRAMIVPROC pglGetProgramiv;
+extern PFNGLGETPROGRAMINFOLOGPROC pglGetProgramInfoLog;
+extern PFNGLUSEPROGRAMPROC pglUseProgram;
+extern PFNGLUNIFORM3FPROC pglUniform3f;
+extern PFNGLGENBUFFERSPROC pglGenBuffers;
+extern PFNGLGENVERTEXARRAYSPROC pglGenVertexArrays;
+extern PFNGLBINDVERTEXARRAYPROC pglBindVertexArray;
+extern PFNGLBINDBUFFERPROC pglBindBuffer;
+extern PFNGLVERTEXATTRIBPOINTERPROC pglVertexAttribPointer;
+extern PFNGLENABLEVERTEXATTRIBARRAYPROC pglEnableVertexAttribArray;
+extern PFNGLDELETEVERTEXARRAYSPROC pglDeleteVertexArrays;
+extern PFNGLDELETEBUFFERSPROC pglDeleteBuffers;
+extern PFNGLUNIFORMMATRIX4FVPROC pglUniformMatrix4fv;
+extern PFNGLBUFFERDATAPROC pglBufferData;
+extern PFNGLBUFFERSUBDATAPROC pglBufferSubData;
+extern PFNGLACTIVETEXTUREPROC pglActiveTexture;
+extern PFNGLBLENDFUNCSEPARATEPROC pglBlendFuncSeparate;
+
+void osd_gl_init(void);
+
+#endif

@@ -24,12 +24,27 @@
 
 #include "main/list.h"
 #include "osal/preproc.h"
+#include "osd/osd_text.h"
+#include "osd/osd_gl.h"
 
 #if defined(__GNUC__)
 #define ATTR_FMT(fmtpos, attrpos) __attribute__ ((format (printf, fmtpos, attrpos)))
 #else
 #define ATTR_FMT(fmtpos, attrpos)
 #endif
+
+#define FONT_FILENAME "font.ttf"
+
+#define OSD_TEXT_HEIGHT_RATIO 0.015f
+#define OSD_MAX_MSG_LEN 1024
+#define OSD_NUM_MESSAGES 20
+#define OSD_SCROLL_MSEC 250.0f
+
+//Account for messages and corners
+#define OSD_VERTEX_BUF_SIZE (OSD_MAX_MSG_LEN*6*sizeof(osd_vertex) + 6*4*sizeof(osd_vertex))
+
+#define OSD_FG_COLOR { 1.0f, 1.0f, 0.0f }
+#define OSD_BG_COLOR { 0.0f, 0.0f, 0.0f }
 
 /******************************************************************
    osd_corner
@@ -72,26 +87,28 @@ enum osd_animation_type {
     OSD_NUM_ANIM_TYPES
 };
 
+#define OSD_INFINITE_TIMEOUT 0xffffffff
+
 typedef struct {
     char *text;        // Text that this object will have when displayed
     enum osd_corner corner; // One of the 9 corners
-    float xoffset;     // Relative X position
-    float yoffset;     // Relative Y position
-    float color[3];    // Red, Green, Blue values
-    float sizebox[4];  // bounding box (xmin, ymin, xmax, ymax)
+    float yOffset;     // Relative Y position
     int state;         // display state of current message
-    enum osd_animation_type animation[OSD_NUM_STATES]; // animations for each display state
     unsigned int timeout[OSD_NUM_STATES]; // timeouts for each display state
-#define OSD_INFINITE_TIMEOUT 0xffffffff
-    unsigned int frames; // number of frames in this state
+    unsigned int elapsedTime; // time spent in this state
     int user_managed; // structure managed by caller and not to be freed by us
+    float alpha; //alpha for fading animation
+    int vboOffset; //Offset into gpu buffer for this message
+    int textWidth; //width of text measure when compiled
+    int textVertexCnt; //Number of vertices used when compiling text
     struct list_head list;
 } osd_message_t;
 
 enum { R, G, B }; // for referencing color array
 
-#ifdef M64P_OSD
-
+//Need to restor this to original form
+//#ifdef M64P_OSD
+#ifdef __OSD_H__
 void osd_init(int width, int height);
 void osd_exit(void);
 void osd_render(void);
@@ -117,7 +134,7 @@ static osal_inline void osd_render(void)
 
 static osal_inline osd_message_t * osd_new_message(enum osd_corner eCorner, const char *fmt, ...)
 {
-	return NULL;
+    return NULL;
 }
 
 static osal_inline void osd_update_message(osd_message_t *msg, const char *fmt, ...)
