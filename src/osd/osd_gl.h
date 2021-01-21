@@ -34,6 +34,7 @@ extern PFNGLBUFFERDATAPROC pglBufferData;
 extern PFNGLBUFFERSUBDATAPROC pglBufferSubData;
 extern PFNGLACTIVETEXTUREPROC pglActiveTexture;
 extern PFNGLBLENDFUNCSEPARATEPROC pglBlendFuncSeparate;
+extern PFNGLBINDFRAMEBUFFERPROC pglBindFrameBuffer;
 
 void osd_gl_init(void);
 

@@ -406,9 +406,12 @@ void osd_render(void)
     static int width = 0, height = 0, x = 0, y = 0;
     static unsigned int lastRenderTime = 0;
     static unsigned int lastDebugTime = 0;
+    static int count = 0;
     unsigned int curRenderTime;
 
     curRenderTime = SDL_GetTicks();
+
+    count++;
 
     if (!l_OsdInitialized)
         osd_render_init();
@@ -424,9 +427,11 @@ void osd_render(void)
         return;
     }
 
+    GLboolean sc;
     ivec4 viewport;
+    ivec4 scissor;
     GLint program;
-    GLint vao, vbo;
+    GLint vao, vbo, fb;
     float fCornerPos[OSD_NUM_CORNERS];
     float msgHeight = l_atlas->textHeight + 3*l_atlas->borderSize;
     osd_message_t *msg, *safe;
@@ -434,11 +439,21 @@ void osd_render(void)
     glGetIntegerv(GL_CURRENT_PROGRAM, &program);
     pglUseProgram(l_shaderProgram);
 
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fb);
+    pglBindFrameBuffer(GL_DRAW_FRAMEBUFFER, 0);
+
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &vbo);
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
     pglBindVertexArray(l_vao);
     pglBindBuffer(GL_ARRAY_BUFFER, l_vbo);
     glGetIntegerv(GL_VIEWPORT, viewport.data);
+    glGetIntegerv(GL_SCISSOR_BOX, scissor.data);
+
+    glGetBooleanv(GL_SCISSOR_TEST, &sc);
+    glDisable(GL_SCISSOR_TEST);
+
+    fprintf(stderr, "VP: %d, %d, %d, %d\n", viewport.x, viewport.y, viewport.z, viewport.w);
+    fprintf(stderr, "SC: %d, %d, %d, %d\n", scissor.x, scissor.y, scissor.z, scissor.w);
 
     if (x != viewport.x || y != viewport.y || width != viewport.z
         || height != viewport.w)
@@ -513,11 +528,16 @@ void osd_render(void)
     if (blend == GL_FALSE)
         glDisable(GL_BLEND);
 
+    if (sc == GL_TRUE)
+        glEnable(GL_SCISSOR_TEST);
+
     pglActiveTexture(currentActiveTexture);
     glBindTexture(GL_TEXTURE_2D, currentTexture);
 
     pglBindBuffer(GL_ARRAY_BUFFER, vbo);
     pglBindVertexArray(vao);
+
+    pglBindFrameBuffer(GL_DRAW_FRAMEBUFFER, fb);
 
     float scrollAdd = (float)(curRenderTime-lastRenderTime)/OSD_SCROLL_MSEC;
 

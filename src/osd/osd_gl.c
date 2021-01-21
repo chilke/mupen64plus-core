@@ -31,6 +31,7 @@ PFNGLBUFFERDATAPROC pglBufferData = NULL;
 PFNGLBUFFERSUBDATAPROC pglBufferSubData = NULL;
 PFNGLACTIVETEXTUREPROC pglActiveTexture = NULL;
 PFNGLBLENDFUNCSEPARATEPROC pglBlendFuncSeparate = NULL;
+PFNGLBINDFRAMEBUFFERPROC pglBindFrameBuffer = NULL;
 
 void osd_gl_init(void)
 {
@@ -63,4 +64,5 @@ void osd_gl_init(void)
     pglBufferSubData = (PFNGLBUFFERSUBDATAPROC)SDL_GL_GetProcAddress("glBufferSubData");
     pglActiveTexture = (PFNGLACTIVETEXTUREPROC)SDL_GL_GetProcAddress("glActiveTexture");
     pglBlendFuncSeparate = (PFNGLBLENDFUNCSEPARATEPROC)SDL_GL_GetProcAddress("glBlendFuncSeparate");
+    pglBindFrameBuffer = (PFNGLBINDFRAMEBUFFERPROC)SDL_GL_GetProcAddress("glBindFrameBuffer");
 }
